@@ -1,0 +1,82 @@
+<script>
+let zipDistances = {};
+
+async function fetchZipDistances() {
+  const response = await fetch('https://raw.githubusercontent.com/asdgfasgf/asf/8e120b07b7337f6beec92a022dfe500512eb66ab/csvjson.json');
+  const data = await response.json();
+  
+  console.log('Data fetched:', data);
+
+  data.forEach(entry => {
+    const zipCode = entry["Zip Codes"];
+    const distance = parseFloat(entry["Distance_to_Aalborg"].replace(",", "."));
+    zipDistances[zipCode] = distance;
+  });
+
+  console.log('Zip distances after processing:', zipDistances);
+}
+
+async function fetchDistance(zipCode) {
+  return zipDistances[zipCode];
+}
+
+function roundToNearestTen(num) {
+  return Math.round(num / 10) * 10;
+}
+
+async function calculatePrice() {
+  const squareMeters = parseFloat(document.getElementById('squareMeters').value);
+  const guarantee = document.getElementById('guarantee').value;
+  const area = document.getElementById('area').value;
+  const zipCode = document.getElementById('zipCode').value;
+
+  const distance = await fetchDistance(zipCode);
+
+  if (distance === undefined) {
+    document.getElementById('result').innerText = 'Zip code not found';
+    return;
+  }
+
+  const basePrice = 1200;
+  const guaranteeFactor = guarantee === '3months' ? 0.8 : 1;
+  const areaFactor = area === 'indoor' ? 1 : 1.2;
+  const distancePrice = distance * 2;
+  const sizePrice = squareMeters * 1;
+
+  const totalPrice = (basePrice * guaranteeFactor * areaFactor) + distancePrice + sizePrice;
+  const roundedTotalPrice = roundToNearestTen(totalPrice);
+  
+  document.getElementById('result').innerText = `Total price: ${roundedTotalPrice} DKK`;
+}
+
+// Call the fetchZipDistances function when the page loads
+document.addEventListener('DOMContentLoaded', fetchZipDistances);
+</script>
+
+<form onsubmit="event.preventDefault(); calculatePrice();">
+  <label>
+    Square meters:
+    <input type="number" id="squareMeters" required>
+  </label>
+  <label>
+    Guarantee:
+    <select id="guarantee">
+      <option value="3months">3 months</option>
+      <option value="restOfYear">Rest of the year</option>
+    </select>
+  </label>
+  <label>
+    Area:
+    <select id="area">
+      <option value="indoor">Indoor</option>
+      <option value="outdoor">Outdoor</option>
+    </select>
+  </label>
+  <label>
+    Zip code:
+    <input type="number" id="zipCode" required>
+  </label>
+  <button type="submit">Calculate</button>
+</form>
+
+<p id="result"></p>
